@@ -11,13 +11,8 @@ export class MetadataBuilder {
     duration: number,
     audioFileName: string
   ) {
-    console.log('Building metadata with notes:', notes);
-    console.log('Timestamp map entries:', Array.from(timestampMap.entries()));
-    
     // Extract timestamps from notes with proper text content
     const timestamps = this.extractTimestamps(notes, timestampMap, duration);
-    
-    console.log('Extracted timestamps:', timestamps);
 
     // Meeting info JSON (compatible with C# SaveMeetingMetadataToJson)
     const meetingInfoJson: MeetingMetadata = {
@@ -54,14 +49,9 @@ export class MetadataBuilder {
   ): Array<{ Index: number; Text: string; StartTime: string; EndTime: string; Highlight: boolean }> {
     const timestamps: Array<{ Index: number; Text: string; StartTime: string; EndTime: string; Highlight: boolean }> = [];
     
-    console.log('extractTimestamps - Input notes:', notes);
-    console.log('extractTimestamps - timestampMap size:', timestampMap.size);
-    
     // Sort timestamps by time (not position)
     const sortedTimestamps = Array.from(timestampMap.entries())
       .sort((a, b) => a[1] - b[1]);
-
-    console.log('extractTimestamps - Sorted timestamps:', sortedTimestamps);
 
     for (let i = 0; i < sortedTimestamps.length; i++) {
       const [position, startTime] = sortedTimestamps[i];
@@ -74,8 +64,6 @@ export class MetadataBuilder {
 
       // Extract text after this timestamp
       const text = this.extractTextAfterTimestamp(notes, position);
-      
-      console.log(`Timestamp ${i}: position=${position}, text="${text}"`);
 
       if (text.trim()) {
         timestamps.push({
@@ -92,20 +80,16 @@ export class MetadataBuilder {
   }
 
   private static extractTextAfterTimestamp(text: string, position: number): string {
-    // Split text into lines
-    const lines = text.split('\n');
-    let charCount = 0;
+    // Get substring starting from position
+    const fromPosition = text.substring(position);
     
-    // Find the line containing this position
-    for (const line of lines) {
-      if (charCount <= position && position < charCount + line.length) {
-        // Found the line with timestamp
-        // Extract text after the timestamp pattern [HH:MM:SS]
-        const timestampRegex = /\[\d{2}:\d{2}:\d{2}\]\s*/;
-        const textAfterTimestamp = line.replace(timestampRegex, '').trim();
-        return textAfterTimestamp;
-      }
-      charCount += line.length + 1; // +1 for newline
+    // Find timestamp pattern and get text after it on the same line
+    const match = fromPosition.match(/\[\d{2}:\d{2}:\d{2}\]\s*(.*)/);
+    
+    if (match && match[1]) {
+      // Get text until end of line
+      const textAfter = match[1].split('\n')[0].trim();
+      return textAfter;
     }
     
     return '';

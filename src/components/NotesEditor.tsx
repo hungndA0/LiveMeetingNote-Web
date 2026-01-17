@@ -22,7 +22,6 @@ export const NotesEditor: React.FC<Props> = ({
   const quillRef = useRef<Quill | null>(null);
   const recordingStartTime = useRef<number>(0);
   const [showTimestamps, setShowTimestamps] = React.useState(true);
-  const newLineStartPos = useRef<number | null>(null);
   const lastTextLength = useRef<number>(0);
   const TIME_OFFSET_MS = 2000; // Bù 2 giây cho thời gian nghe và gõ
 
@@ -79,42 +78,38 @@ export const NotesEditor: React.FC<Props> = ({
     if (isRecording) {
       recordingStartTime.current = Date.now();
       lastTextLength.current = quillRef.current?.getText().length || 0;
-      newLineStartPos.current = null;
     }
   }, [isRecording]);
 
-  // Detect Enter key to mark new line start
+  // Detect Enter key and insert timestamp immediately
   useEffect(() => {
-    if (!isRecording) return;
+    if (!isRecording || !quillRef.current) return;
 
+    const quill = quillRef.current;
+    
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Enter' && quillRef.current) {
-        // Mark that next character will be start of new line
-        const selection = quillRef.current.getSelection();
+      if (e.key === 'Enter') {
+        // Get current cursor position BEFORE Enter is processed
+        const selection = quill.getSelection();
         if (selection) {
-          newLineStartPos.current = selection.index + 1;
+          // Use setTimeout to let Enter create the new line first
+          setTimeout(() => {
+            const newLinePos = selection.index + 1;
+            insertTimestampAtPosition(newLinePos);
+          }, 10);
         }
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    const editorElement = quill.root;
+    editorElement.addEventListener('keydown', handleKeyDown);
+    return () => editorElement.removeEventListener('keydown', handleKeyDown);
   }, [isRecording]);
 
   const handleTextChange = (_delta: any) => {
-    if (!quillRef.current || newLineStartPos.current === null) return;
-    
-    const currentLength = quillRef.current.getText().length;
-    const selection = quillRef.current.getSelection();
-    
-    // Check if user just typed first character of new line
-    if (selection && selection.index === newLineStartPos.current + 1) {
-      // Insert timestamp at the start of this new line
-      insertTimestampAtPosition(newLineStartPos.current);
-      newLineStartPos.current = null; // Reset
-    }
-    
-    lastTextLength.current = currentLength;
+    // This is now mainly for updating HTML content
+    if (!quillRef.current) return;
+    lastTextLength.current = quillRef.current.getText().length;
   };
 
   const insertTimestampAtPosition = (position: number) => {

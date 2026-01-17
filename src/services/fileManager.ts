@@ -57,6 +57,20 @@ export class FileManagerService {
     await writable.close();
   }
 
+  async saveWordFile(wordBlob: Blob, fileName: string): Promise<void> {
+    if (!this.dirHandle) {
+      throw new Error('No folder selected');
+    }
+
+    const fileHandle = await this.dirHandle.getFileHandle(fileName, {
+      create: true
+    });
+
+    const writable = await fileHandle.createWritable();
+    await writable.write(wordBlob);
+    await writable.close();
+  }
+
   async createProjectDirectory(projectName: string): Promise<void> {
     if (!this.dirHandle) {
       throw new Error('No folder selected');

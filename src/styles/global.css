@@ -292,6 +292,8 @@ body {
 /* Timestamp styling in editor */
 .ql-editor strong[style*='color: rgb(64, 150, 255)'],
 .ql-editor [style*='color: rgb(64, 150, 255)'] {
+  color: #4096ff !important;
+  font-weight: bold;
   cursor: pointer;
   text-decoration: underline dotted;
   transition: background 0.2s;
@@ -304,11 +306,10 @@ body {
   padding: 2px 4px;
 }
 
-/* Hide timestamps when toggle is off */
+/* Hide timestamps ONLY when toggle is off */
 .ql-editor.hide-timestamps strong[style*='color: rgb(64, 150, 255)'],
-.ql-editor.hide-timestamps [style*='color: rgb(64, 150, 255)'],
-.ql-editor.hide-timestamps [style*='color: transparent'] {
-  display: none;
+.ql-editor.hide-timestamps [style*='color: rgb(64, 150, 255)'] {
+  display: none !important;
 }
 
 /* Audio Player */

@@ -3,11 +3,11 @@ import { saveAs } from 'file-saver';
 import type { MeetingInfo } from '../types/types';
 
 export class WordExporter {
-  static async exportToWord(
+  // Create Word blob without downloading
+  static async createWordBlob(
     meetingInfo: MeetingInfo,
-    notesHtml: string,
-    fileName: string
-  ): Promise<void> {
+    notesHtml: string
+  ): Promise<Blob> {
     // Remove timestamps from HTML
     const cleanHtml = this.removeTimestamps(notesHtml);
     
@@ -96,9 +96,18 @@ export class WordExporter {
       ]
     });
     
-    // Generate and save
+    // Generate blob
     const { Packer } = await import('docx');
-    const blob = await Packer.toBlob(doc);
+    return await Packer.toBlob(doc);
+  }
+
+  // Export with auto-download (for fallback browsers)
+  static async exportToWord(
+    meetingInfo: MeetingInfo,
+    notesHtml: string,
+    fileName: string
+  ): Promise<void> {
+    const blob = await this.createWordBlob(meetingInfo, notesHtml);
     saveAs(blob, fileName);
   }
   

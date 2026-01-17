@@ -77,10 +77,6 @@ export const RecordingControls: React.FC<Props> = ({
       const recordingDuration = recorder.getCurrentDuration();
       onRecordingChange(false);
 
-      // Debug: Log notes and timestamp map
-      console.log('Notes text:', notes);
-      console.log('Timestamp map:', Array.from(timestampMap.entries()));
-
       // Generate file names
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('.')[0];
       const projectName = `Meeting_${timestamp}`;
@@ -109,12 +105,9 @@ export const RecordingControls: React.FC<Props> = ({
           'metadata.json'
         );
 
-        // Export Word document
-        await WordExporter.exportToWord(
-          meetingInfo,
-          notesHtml,
-          `${projectName}.docx`
-        );
+        // Export Word document to same folder
+        const wordBlob = await WordExporter.createWordBlob(meetingInfo, notesHtml);
+        await fileManager.saveWordFile(wordBlob, `${projectName}.docx`);
 
         message.success('Recording saved successfully!');
       } else {
