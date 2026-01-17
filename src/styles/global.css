@@ -52,6 +52,24 @@ body {
   background: var(--bg-tertiary);
   border-radius: 20px;
   font-size: 14px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.unsaved-indicator {
+  color: #faad14;
+  font-weight: 600;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 
 /* Metadata Panel */

@@ -22,6 +22,8 @@ export const App: React.FC = () => {
   const [notes, setNotes] = useState<string>('');
   const [notesHtml, setNotesHtml] = useState<string>('');
   const [timestampMap, setTimestampMap] = useState<Map<number, number>>(new Map());
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
 
   // Check browser compatibility
   useEffect(() => {
@@ -32,12 +34,46 @@ export const App: React.FC = () => {
     }
   }, []);
 
+  // Track unsaved changes
+  useEffect(() => {
+    // Có dữ liệu chưa lưu nếu: đang recording HOẶC (có audio/notes nhưng chưa save)
+    const hasData = isRecording || (!isSaved && (audioBlob !== null || notes.trim().length > 0));
+    setHasUnsavedChanges(hasData);
+  }, [isRecording, audioBlob, notes, isSaved]);
+
+  // Prevent accidental page close/reload when recording or has unsaved data
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        // Chuẩn modern browsers
+        e.preventDefault();
+        // Chrome requires returnValue to be set
+        e.returnValue = 'Bạn có dữ liệu chưa lưu. Bạn có chắc muốn rời khỏi trang?';
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  // Clear unsaved changes flag after successful save
+  const handleAudioBlobChange = (blob: Blob | null) => {
+    setAudioBlob(blob);
+  };
+
+  const handleSaveComplete = () => {
+    setIsSaved(true);
+    setHasUnsavedChanges(false);
+  };
+
   return (
     <div className="app-container">
       <header className="app-header">
         <h1>📝 Live Meeting Notes</h1>
         <div className="status-indicator">
           {navigator.onLine ? '🌐 Online' : '📴 Offline'}
+          {hasUnsavedChanges && <span className="unsaved-indicator" title="Bạn có dữ liệu chưa lưu">⚠️ Chưa lưu</span>}
         </div>
       </header>
 
@@ -48,7 +84,8 @@ export const App: React.FC = () => {
         onFolderSelect={setFolderPath}
         isRecording={isRecording}
         onRecordingChange={setIsRecording}
-        onAudioBlobChange={setAudioBlob}
+        onAudioBlobChange={handleAudioBlobChange}
+        onSaveComplete={handleSaveComplete}
         meetingInfo={meetingInfo}
         notes={notes}
         notesHtml={notesHtml}

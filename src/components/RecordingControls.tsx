@@ -17,6 +17,7 @@ interface Props {
   isRecording: boolean;
   onRecordingChange: (recording: boolean) => void;
   onAudioBlobChange: (blob: Blob | null) => void;
+  onSaveComplete: () => void;
   meetingInfo: MeetingInfo;
   notes: string;
   notesHtml: string;
@@ -29,6 +30,7 @@ export const RecordingControls: React.FC<Props> = ({
   isRecording,
   onRecordingChange,
   onAudioBlobChange,
+  onSaveComplete,
   meetingInfo,
   notes,
   notesHtml,
@@ -110,6 +112,7 @@ export const RecordingControls: React.FC<Props> = ({
         await fileManager.saveWordFile(wordBlob, `${projectName}.docx`);
 
         message.success('Recording saved successfully!');
+        onSaveComplete(); // Notify parent that save is complete
       } else {
         // Fallback: download files
         const downloader = new FileDownloadService();
@@ -140,6 +143,7 @@ export const RecordingControls: React.FC<Props> = ({
         );
 
         message.info('Files downloaded. Please save them to your meeting notes folder.');
+        onSaveComplete(); // Notify parent that save is complete
       }
 
       // Set audio for playback
