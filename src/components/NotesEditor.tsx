@@ -88,16 +88,16 @@ export const NotesEditor: React.FC<Props> = ({
     const quill = quillRef.current;
     
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Enter') {
-        // Get current cursor position BEFORE Enter is processed
-        const selection = quill.getSelection();
-        if (selection) {
-          // Use setTimeout to let Enter create the new line first
-          setTimeout(() => {
-            const newLinePos = selection.index + 1;
-            insertTimestampAtPosition(newLinePos);
-          }, 10);
-        }
+      if (e.key === 'Enter' && !e.shiftKey) {
+        // Don't prevent default - let Enter create new line
+        // Then insert timestamp at the start of new line
+        setTimeout(() => {
+          const selection = quill.getSelection();
+          if (selection) {
+            // Insert timestamp at current cursor position (start of new line)
+            insertTimestampAtPosition(selection.index);
+          }
+        }, 0);
       }
     };
 
@@ -119,17 +119,21 @@ export const NotesEditor: React.FC<Props> = ({
     // Subtract offset to account for listening and typing time
     const adjustedDuration = Math.max(0, currentDuration - TIME_OFFSET_MS);
     const timeStr = formatTime(adjustedDuration);
+    const timestampText = `[${timeStr}] `;
 
     // Insert timestamp at the beginning of the line (always blue, visibility controlled by CSS)
-    quillRef.current.insertText(position, `[${timeStr}] `, {
+    quillRef.current.insertText(position, timestampText, {
       color: '#4096ff',
       bold: true
     });
 
-    // Store timestamp mapping
+    // Store timestamp mapping with position
     const newMap = new Map(timestampMap);
     newMap.set(position, adjustedDuration);
     onTimestampMapChange(newMap);
+
+    // Move cursor after timestamp
+    quillRef.current.setSelection(position + timestampText.length, 0);
   };
 
   const handleDoubleClick = (_e: MouseEvent) => {

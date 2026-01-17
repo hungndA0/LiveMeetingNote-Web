@@ -80,16 +80,25 @@ export class MetadataBuilder {
   }
 
   private static extractTextAfterTimestamp(text: string, position: number): string {
-    // Get substring starting from position
-    const fromPosition = text.substring(position);
+    // Split text into lines
+    const lines = text.split('\n');
+    let currentPos = 0;
     
-    // Find timestamp pattern and get text after it on the same line
-    const match = fromPosition.match(/\[\d{2}:\d{2}:\d{2}\]\s*(.*)/);
-    
-    if (match && match[1]) {
-      // Get text until end of line
-      const textAfter = match[1].split('\n')[0].trim();
-      return textAfter;
+    // Find the line containing this position
+    for (const line of lines) {
+      const lineEnd = currentPos + line.length;
+      
+      if (position >= currentPos && position <= lineEnd) {
+        // Found the line with this timestamp
+        // Extract text after timestamp pattern [HH:MM:SS]
+        const match = line.match(/\[\d{2}:\d{2}:\d{2}\]\s*(.*)/);
+        if (match && match[1]) {
+          return match[1].trim();
+        }
+        return '';
+      }
+      
+      currentPos = lineEnd + 1; // +1 for newline character
     }
     
     return '';
