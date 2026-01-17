@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/LiveMeetingNote-Web/sw.js', { scope: '/LiveMeetingNote-Web/' })})}
