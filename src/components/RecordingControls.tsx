@@ -3,7 +3,8 @@ import { Button, Space, message } from 'antd';
 import {
   FolderOpenOutlined,
   AudioOutlined,
-  StopOutlined
+  StopOutlined,
+  SaveOutlined
 } from '@ant-design/icons';
 import { AudioRecorderService } from '../services/audioRecorder';
 import { FileManagerService, FileDownloadService } from '../services/fileManager';
@@ -22,6 +23,8 @@ interface Props {
   notes: string;
   notesHtml: string;
   timestampMap: Map<number, number>;
+  audioBlob: Blob | null;
+  isSaved: boolean;
 }
 
 export const RecordingControls: React.FC<Props> = ({
@@ -34,11 +37,15 @@ export const RecordingControls: React.FC<Props> = ({
   meetingInfo,
   notes,
   notesHtml,
-  timestampMap
+  timestampMap,
+  audioBlob,
+  isSaved
 }) => {
   const [duration, setDuration] = useState<number>(0);
   const [recorder] = useState(() => new AudioRecorderService());
   const [fileManager] = useState(() => new FileManagerService());
+  const [lastProjectName, setLastProjectName] = useState<string>('');
+  const [lastRecordingDuration, setLastRecordingDuration] = useState<number>(0);
 
   useEffect(() => {
     if (!isRecording) return;
@@ -112,6 +119,8 @@ export const RecordingControls: React.FC<Props> = ({
         await fileManager.saveWordFile(wordBlob, `${projectName}.docx`);
 
         message.success('Recording saved successfully!');
+        setLastProjectName(projectName);
+        setLastRecordingDuration(recordingDuration);
         onSaveComplete(); // Notify parent that save is complete
       } else {
         // Fallback: download files
@@ -143,6 +152,8 @@ export const RecordingControls: React.FC<Props> = ({
         );
 
         message.info('Files downloaded. Please save them to your meeting notes folder.');
+        setLastProjectName(projectName);
+        setLastRecordingDuration(recordingDuration);
         onSaveComplete(); // Notify parent that save is complete
       }
 
@@ -150,6 +161,60 @@ export const RecordingControls: React.FC<Props> = ({
       onAudioBlobChange(audioBlob);
     } catch (error: any) {
       message.error(`Failed to stop recording: ${error.message}`);
+    }
+  };
+
+  const handleSaveChanges = async () => {
+    try {
+      if (!audioBlob || !lastProjectName) {
+        message.error('No recording to update');
+        return;
+      }
+
+      const audioFileName = `${lastProjectName}.wav`;
+
+      // Build updated metadata with current notes
+      const metadata = MetadataBuilder.buildMetadata(
+        meetingInfo,
+        notes,
+        timestampMap,
+        lastRecordingDuration,
+        audioFileName
+      );
+
+      // Save files - check if folder was selected via folderPath
+      if (folderPath) {
+        // Update metadata and Word files
+        await fileManager.saveMetadataFile(
+          metadata.metadata,
+          'metadata.json'
+        );
+
+        const wordBlob = await WordExporter.createWordBlob(meetingInfo, notesHtml);
+        await fileManager.saveWordFile(wordBlob, `${lastProjectName}.docx`);
+
+        message.success('Changes saved successfully!');
+      } else {
+        // Download updated files
+        const downloader = new FileDownloadService();
+        
+        await downloader.downloadMetadataFile(
+          metadata.metadata,
+          'metadata.json'
+        );
+
+        await WordExporter.exportToWord(
+          meetingInfo,
+          notesHtml,
+          `${lastProjectName}.docx`
+        );
+
+        message.info('Updated files downloaded.');
+      }
+
+      onSaveComplete(); // Notify parent that save is complete
+    } catch (error: any) {
+      message.error(`Failed to save changes: ${error.message}`);
     }
   };
 
@@ -194,6 +259,19 @@ export const RecordingControls: React.FC<Props> = ({
             size="large"
           >
             Stop
+          </Button>
+        )}
+
+        {/* Show Save Changes button when stopped and has saved data */}
+        {!isRecording && isSaved && audioBlob && (
+          <Button
+            type="default"
+            icon={<SaveOutlined />}
+            onClick={handleSaveChanges}
+            size="large"
+            style={{ backgroundColor: '#52c41a', color: 'white', borderColor: '#52c41a' }}
+          >
+            Save Changes
           </Button>
         )}
 

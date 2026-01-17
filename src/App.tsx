@@ -24,6 +24,7 @@ export const App: React.FC = () => {
   const [timestampMap, setTimestampMap] = useState<Map<number, number>>(new Map());
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [savedNotesSnapshot, setSavedNotesSnapshot] = useState<string>('');
 
   // Check browser compatibility
   useEffect(() => {
@@ -36,10 +37,14 @@ export const App: React.FC = () => {
 
   // Track unsaved changes
   useEffect(() => {
-    // Có dữ liệu chưa lưu nếu: đang recording HOẶC (có audio/notes nhưng chưa save)
-    const hasData = isRecording || (!isSaved && (audioBlob !== null || notes.trim().length > 0));
+    // Có dữ liệu chưa lưu nếu:
+    // 1. Đang recording
+    // 2. Có audio/notes nhưng chưa save lần đầu
+    // 3. Đã save nhưng notes bị sửa đổi
+    const notesModified = isSaved && savedNotesSnapshot !== notes;
+    const hasData = isRecording || (!isSaved && (audioBlob !== null || notes.trim().length > 0)) || notesModified;
     setHasUnsavedChanges(hasData);
-  }, [isRecording, audioBlob, notes, isSaved]);
+  }, [isRecording, audioBlob, notes, isSaved, savedNotesSnapshot]);
 
   // Prevent accidental page close/reload when recording or has unsaved data
   useEffect(() => {
@@ -65,6 +70,7 @@ export const App: React.FC = () => {
   const handleSaveComplete = () => {
     setIsSaved(true);
     setHasUnsavedChanges(false);
+    setSavedNotesSnapshot(notes); // Save snapshot to detect future changes
   };
 
   return (
@@ -90,6 +96,8 @@ export const App: React.FC = () => {
         notes={notes}
         notesHtml={notesHtml}
         timestampMap={timestampMap}
+        audioBlob={audioBlob}
+        isSaved={isSaved}
       />
 
       <NotesEditor
