@@ -8,13 +8,15 @@ interface Props {
   onNotesChange: (notes: string) => void;
   timestampMap: Map<number, number>;
   onTimestampMapChange: (map: Map<number, number>) => void;
+  onNotesHtmlChange?: (html: string) => void;
 }
 
 export const NotesEditor: React.FC<Props> = ({
   isRecording,
   onNotesChange,
   timestampMap,
-  onTimestampMapChange
+  onTimestampMapChange,
+  onNotesHtmlChange
 }) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const quillRef = useRef<Quill | null>(null);
@@ -43,6 +45,12 @@ export const NotesEditor: React.FC<Props> = ({
       quillRef.current.on('text-change', (_delta: any, _oldDelta: any, source: string) => {
         const currentText = quillRef.current!.getText();
         onNotesChange(currentText);
+        
+        // Also get HTML content if callback is provided
+        if (onNotesHtmlChange && quillRef.current) {
+          const container = quillRef.current.root as HTMLElement;
+          onNotesHtmlChange(container.innerHTML);
+        }
         
         // Auto-insert timestamp when starting new line during recording
         if (isRecording && source === 'user') {

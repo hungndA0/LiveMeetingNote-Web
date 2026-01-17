@@ -8,6 +8,7 @@ import {
 import { AudioRecorderService } from '../services/audioRecorder';
 import { FileManagerService, FileDownloadService } from '../services/fileManager';
 import { MetadataBuilder } from '../services/metadataBuilder';
+import { WordExporter } from '../services/wordExporter';
 import type { MeetingInfo } from '../types/types';
 
 interface Props {
@@ -18,6 +19,7 @@ interface Props {
   onAudioBlobChange: (blob: Blob | null) => void;
   meetingInfo: MeetingInfo;
   notes: string;
+  notesHtml: string;
   timestampMap: Map<number, number>;
 }
 
@@ -29,6 +31,7 @@ export const RecordingControls: React.FC<Props> = ({
   onAudioBlobChange,
   meetingInfo,
   notes,
+  notesHtml,
   timestampMap
 }) => {
   const [duration, setDuration] = useState<number>(0);
@@ -106,6 +109,13 @@ export const RecordingControls: React.FC<Props> = ({
           'metadata.json'
         );
 
+        // Export Word document
+        await WordExporter.exportToWord(
+          meetingInfo,
+          notesHtml,
+          `${projectName}.docx`
+        );
+
         message.success('Recording saved successfully!');
       } else {
         // Fallback: download files
@@ -127,6 +137,13 @@ export const RecordingControls: React.FC<Props> = ({
         await downloader.downloadMetadataFile(
           metadata.metadata,
           'metadata.json'
+        );
+
+        // Export Word document
+        await WordExporter.exportToWord(
+          meetingInfo,
+          notesHtml,
+          `${projectName}.docx`
         );
 
         message.info('Files downloaded. Please save them to your meeting notes folder.');

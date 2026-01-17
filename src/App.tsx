@@ -20,6 +20,7 @@ export const App: React.FC = () => {
     attendees: ''
   });
   const [notes, setNotes] = useState<string>('');
+  const [notesHtml, setNotesHtml] = useState<string>('');
   const [timestampMap, setTimestampMap] = useState<Map<number, number>>(new Map());
 
   // Check browser compatibility
@@ -50,6 +51,7 @@ export const App: React.FC = () => {
         onAudioBlobChange={setAudioBlob}
         meetingInfo={meetingInfo}
         notes={notes}
+        notesHtml={notesHtml}
         timestampMap={timestampMap}
       />
 
@@ -59,6 +61,7 @@ export const App: React.FC = () => {
         onNotesChange={setNotes}
         timestampMap={timestampMap}
         onTimestampMapChange={setTimestampMap}
+        onNotesHtmlChange={setNotesHtml}
       />
 
       <AudioPlayer audioBlob={audioBlob} />

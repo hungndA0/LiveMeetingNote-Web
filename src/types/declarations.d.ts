@@ -35,6 +35,7 @@ declare module 'quill' {
     getSelection(focus?: boolean): { index: number; length: number } | null;
     insertText(index: number, text: string, formats?: any): void;
     setSelection(index: number, length: number): void;
+    root: HTMLElement;
   }
 
   interface QuillOptions {
@@ -45,3 +46,24 @@ declare module 'quill' {
 }
 
 declare module 'quill/dist/quill.snow.css';
+
+declare module 'file-saver' {
+  export function saveAs(blob: Blob, filename: string): void;
+}
+
+declare module 'docx' {
+  export class Document {
+    constructor(options: any);
+  }
+  export class Paragraph {
+    constructor(options: any);
+  }
+  export class TextRun {
+    constructor(options: any);
+  }
+  export const HeadingLevel: any;
+  export const AlignmentType: any;
+  export class Packer {
+    static toBlob(doc: Document): Promise<Blob>;
+  }
+}
