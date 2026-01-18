@@ -22,6 +22,29 @@ export const NotesEditor: React.FC<Props> = ({
   const [showTimestamps, setShowTimestamps] = useState(true);
   const TIME_OFFSET_MS = 2000;
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Use line-index-based timestamps (lineIndex → timeMs)
+  const [lineTimestamps, setLineTimestamps] = useState<Map<number, number>>(new Map());
+  
+  // Sync with parent's position-based timestampMap (for compatibility)
+  useEffect(() => {
+    const newLineTimestamps = new Map<number, number>();
+    const lines = notes.split('\n');
+    
+    timestampMap.forEach((time, position) => {
+      let currentPos = 0;
+      for (let i = 0; i < lines.length; i++) {
+        const lineEnd = currentPos + lines[i].length;
+        if (position >= currentPos && position <= lineEnd + 1) {
+          newLineTimestamps.set(i, time);
+          break;
+        }
+        currentPos = lineEnd + 1;
+      }
+    });
+    
+    setLineTimestamps(newLineTimestamps);
+  }, [timestampMap, notes]);
 
   useEffect(() => {
     if (isRecording) {
@@ -42,23 +65,56 @@ export const NotesEditor: React.FC<Props> = ({
 
   const handleLineChange = (index: number, value: string) => {
     const lines = notes.split('\n');
+    const oldLine = lines[index];
+    
+    // If line becomes empty, delete it
+    if (value === '' && lines.length > 1) {
+      lines.splice(index, 1);
+      
+      // Remove timestamp for deleted line and shift others
+      const newLineTimestamps = new Map<number, number>();
+      lineTimestamps.forEach((time, lineIndex) => {
+        if (lineIndex < index) {
+          newLineTimestamps.set(lineIndex, time);
+        } else if (lineIndex > index) {
+          newLineTimestamps.set(lineIndex - 1, time);
+        }
+      });
+      setLineTimestamps(newLineTimestamps);
+      
+      onNotesChange(lines.join('\n'));
+      syncToParentTimestampMap(lines, newLineTimestamps);
+      return;
+    }
+    
+    // Update line content
     lines[index] = value;
     
-    // Auto-create timestamp if this is first character on this line
-    if (isRecording && value.trim().length > 0) {
-      const lineStartPos = lines.slice(0, index).join('\n').length + (index > 0 ? 1 : 0);
-      
-      if (!timestampMap.has(lineStartPos)) {
+    // Auto-create timestamp if first character on this line
+    if (isRecording && oldLine.trim().length === 0 && value.trim().length > 0) {
+      if (!lineTimestamps.has(index)) {
         const currentDuration = Date.now() - recordingStartTime.current;
         const adjustedDuration = Math.max(0, currentDuration - TIME_OFFSET_MS);
         
-        const newMap = new Map(timestampMap);
-        newMap.set(lineStartPos, adjustedDuration);
-        onTimestampMapChange(newMap);
+        const newLineTimestamps = new Map(lineTimestamps);
+        newLineTimestamps.set(index, adjustedDuration);
+        setLineTimestamps(newLineTimestamps);
+        
+        syncToParentTimestampMap(lines, newLineTimestamps);
       }
     }
     
     onNotesChange(lines.join('\n'));
+  };
+  
+  // Convert line-based timestamps to position-based for parent state
+  const syncToParentTimestampMap = (lines: string[], lineTimestamps: Map<number, number>) => {
+    const newMap = new Map<number, number>();
+    lineTimestamps.forEach((time, lineIndex) => {
+      const lineStartPos = lines.slice(0, lineIndex).join('\n').length + (lineIndex > 0 ? 1 : 0);
+      newMap.set(lineStartPos, time);
+    });
+    onTimestampMapChange(newMap);
   };
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -77,7 +133,19 @@ export const NotesEditor: React.FC<Props> = ({
       lines[index] = beforeCursor;
       lines.splice(index + 1, 0, afterCursor);
       
+      // Shift timestamps for lines after the split
+      const newLineTimestamps = new Map<number, number>();
+      lineTimestamps.forEach((time, lineIndex) => {
+        if (lineIndex < index + 1) {
+          newLineTimestamps.set(lineIndex, time);
+        } else {
+          newLineTimestamps.set(lineIndex + 1, time);
+        }
+      });
+      setLineTimestamps(newLineTimestamps);
+      
       onNotesChange(lines.join('\n'));
+      syncToParentTimestampMap(lines, newLineTimestamps);
       
       // Focus next line after React re-renders
       setTimeout(() => {
@@ -96,15 +164,19 @@ export const NotesEditor: React.FC<Props> = ({
       lines[index - 1] = prevLine + currentLine;
       lines.splice(index, 1);
       
-      // Remove timestamp for this line
-      const lineStartPos = notes.split('\n').slice(0, index).join('\n').length + (index > 0 ? 1 : 0);
-      if (timestampMap.has(lineStartPos)) {
-        const newMap = new Map(timestampMap);
-        newMap.delete(lineStartPos);
-        onTimestampMapChange(newMap);
-      }
+      // Remove timestamp for deleted line and shift others
+      const newLineTimestamps = new Map<number, number>();
+      lineTimestamps.forEach((time, lineIndex) => {
+        if (lineIndex < index) {
+          newLineTimestamps.set(lineIndex, time);
+        } else if (lineIndex > index) {
+          newLineTimestamps.set(lineIndex - 1, time);
+        }
+      });
+      setLineTimestamps(newLineTimestamps);
       
       onNotesChange(lines.join('\n'));
+      syncToParentTimestampMap(lines, newLineTimestamps);
       
       // Focus previous line
       setTimeout(() => {
@@ -117,8 +189,8 @@ export const NotesEditor: React.FC<Props> = ({
     }
   };
 
-  const handleDoubleClick = (lineStartPos: number) => {
-    const timeMs = timestampMap.get(lineStartPos);
+  const handleDoubleClick = (lineIndex: number) => {
+    const timeMs = lineTimestamps.get(lineIndex);
     if (timeMs !== undefined) {
       window.dispatchEvent(
         new CustomEvent('seek-audio', {
@@ -164,9 +236,7 @@ export const NotesEditor: React.FC<Props> = ({
         }}
       >
         {lines.map((line, index) => {
-          const lineStartPos = notes.split('\n').slice(0, index).join('\n').length + (index > 0 ? 1 : 0);
-          const timeMs = timestampMap.get(lineStartPos);
-
+        const timeMs = lineTimestamps.get(index);
           return (
             <div
               key={index}
@@ -177,7 +247,7 @@ export const NotesEditor: React.FC<Props> = ({
             >
               {/* Timestamp Column */}
               <div
-                onClick={() => handleDoubleClick(lineStartPos)}
+                onClick={() => handleDoubleClick(index)}
                 style={{
                   width: '100px',
                   backgroundColor: '#252526',
