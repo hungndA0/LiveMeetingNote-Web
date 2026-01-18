@@ -33,10 +33,10 @@ export const NotesEditor: React.FC<Props> = ({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && isRecording && !e.shiftKey) {
       // Don't prevent default - let Enter create new line naturally
-      // Then insert timestamp after the newline
-      setTimeout(() => {
+      // Use requestAnimationFrame to ensure newline is rendered before inserting timestamp
+      requestAnimationFrame(() => {
         insertTimestampAtCursor();
-      }, 10);
+      });
     }
   };
 
@@ -65,11 +65,11 @@ export const NotesEditor: React.FC<Props> = ({
     onTimestampMapChange(newMap);
 
     // Move cursor after timestamp
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       textarea.selectionStart = cursorPos + timestampText.length;
       textarea.selectionEnd = cursorPos + timestampText.length;
       textarea.focus();
-    }, 10);
+    });
   };
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
